@@ -482,6 +482,23 @@ struct vm_area_struct {
 	struct vm_userfaultfd_ctx vm_userfaultfd_ctx;
 } __randomize_layout;
 
+/*
+* Dictionary to keep track of the check pointed pages
+* in the format ---> address: ptr_to_struct_page
+*/
+struct checkpoint_dict{
+	unsigned long address;
+	struct page* old_page;
+	struct page* new_page;
+	// pte_t checkpointed_pte;
+	pte_t* curr_pte;
+	pmd_t *pmd;
+	bool unshare;
+	spinlock_t *ptl_ptr;
+	struct vm_area_struct *vma;
+	struct checkpoint_dict* next;
+};
+
 struct kioctx_table;
 struct mm_struct {
 	struct {
@@ -673,7 +690,9 @@ struct mm_struct {
 		unsigned long ksm_merging_pages;
 #endif
 	} __randomize_layout;
-
+	/*check which is more appropriate, like whether the program crashes or not*/
+	int checkpoint_enabled; /* Need to appropriately initialize it, check where to do it*/
+	struct checkpoint_dict* dict;
 	/*
 	 * The mm_cpumask needs to be at the end of mm_struct, because it
 	 * is dynamically sized based on nr_cpu_ids.
