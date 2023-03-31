@@ -71,8 +71,6 @@
 #include <asm/unistd.h>
 #include <asm/mmu_context.h>
 
-#include <linux/swap.h>
-
 static void __unhash_process(struct task_struct *p, bool group_dead)
 {
 	nr_threads--;
@@ -735,37 +733,11 @@ static void check_stack_usage(void)
 static inline void check_stack_usage(void) {}
 #endif
 
-void checkpoint_memory_reclaimer(void)
-{
-	/*
-	* Reclaiming the memory or state allocated by the process, which exited without 
-	* Restoring the checkpoint.
-	*/
-    struct mm_struct* mm;
-    struct checkpoint_dict *dict, *next;
-    int i=0;
-	if(!current || !current->mm || !current->mm->checkpoint_enabled)
-	{
-		/*
-		* if there is no checkpoint existing, then we have nothing to do.
-		* all good
-		*/ 
-		return ;
-	}
-	mm = current->mm;
-	for (dict=mm->dict; dict; dict=next) {
-		i++;
-		put_page(dict->new_page);
-		next = dict->next;
-		kfree(dict);
-	}
-}
-
 void __noreturn do_exit(long code)
 {
 	struct task_struct *tsk = current;
 	int group_dead;
-	checkpoint_memory_reclaimer();
+
 	WARN_ON(tsk->plug);
 
 	kcov_task_exit(tsk);
